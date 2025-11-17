@@ -1,0 +1,4 @@
+spacy
+requests
+wikipedia-api
+nltk
