@@ -379,7 +379,7 @@ class WikipediaFactChecker:
                 if wiki_numbers:
                     closest = min(wiki_numbers, key=lambda x: abs(float(x) - float(num)))
                     difference = abs(float(closest) - float(num))
-                    if difference > float(num) * 0.5 > 50% difference:
+                    if difference > float(num) * 0.5:  # > 50% difference
                         contradictions.append(f"Number {num} significantly differs from Wikipedia's {closest}")
         
         return contradictions
@@ -496,17 +496,51 @@ class AIContentFactChecker:
         }
     
     def _assess_misinformation_risk(self, results: List[VerificationResult]) -> str:
-        """Assess overall risk of misinformation"""
+        """IMPROVED: Comprehensive misinformation risk assessment"""
+        total_claims = len(results)
+        if total_claims == 0:
+            return "UNKNOWN"
+        
+        # Count all verdict types
+        supported = sum(1 for r in results if r.verdict == Verdict.SUPPORTED)
         contradicted = sum(1 for r in results if r.verdict == Verdict.CONTRADICTED)
-        total = len(results)
+        partially_supported = sum(1 for r in results if r.verdict == Verdict.PARTIALLY_SUPPORTED)
+        unverifiable = sum(1 for r in results if r.verdict == Verdict.UNVERIFIABLE)
+        misleading = sum(1 for r in results if r.verdict == Verdict.MISLEADING)
         
-        contradiction_ratio = contradicted / total if total > 0 else 0
+        # Calculate ratios
+        supported_ratio = supported / total_claims
+        contradicted_ratio = contradicted / total_claims
+        unverifiable_ratio = unverifiable / total_claims
+        problematic_ratio = (contradicted + partially_supported + misleading) / total_claims
         
-        if contradiction_ratio > 0.5:
+        # Calculate comprehensive risk score (0-100)
+        risk_score = 0
+        
+        # High risk for contradicted claims
+        risk_score += contradicted_ratio * 100
+        
+        # Medium risk for partially supported and misleading claims
+        risk_score += (partially_supported / total_claims) * 70
+        risk_score += (misleading / total_claims) * 80
+        
+        # Some risk for unverifiable claims (unknown truth)
+        risk_score += unverifiable_ratio * 40
+        
+        # Reduce risk for supported claims
+        risk_score -= supported_ratio * 30
+        
+        # Ensure risk score is within bounds
+        risk_score = max(0, min(100, risk_score))
+        
+        # Determine risk level based on comprehensive assessment
+        if risk_score >= 70:
+            return "VERY_HIGH"
+        elif risk_score >= 50:
             return "HIGH"
-        elif contradiction_ratio > 0.2:
+        elif risk_score >= 30:
             return "MEDIUM"
-        elif contradiction_ratio > 0:
+        elif risk_score >= 15:
             return "LOW"
         else:
             return "VERY_LOW"
@@ -524,14 +558,31 @@ class AIContentFactChecker:
         ]
         
         for verdict, count in verdict_counts.most_common():
-            summary_parts.append(f"  - {verdict.value}: {count} claims")
+            percentage = (count / len(results)) * 100
+            summary_parts.append(f"  - {verdict.value}: {count} ({percentage:.1f}%)")
         
-        if accuracy < 0.5:
-            summary_parts.append("\n⚠️  Warning: This AI content contains significant factual inaccuracies")
+        # Risk-based warnings that make sense
+        if risk == "VERY_HIGH":
+            summary_parts.append("\n🚨 CRITICAL: This content contains extensive misinformation")
+            summary_parts.append("   Most claims are contradicted by reliable sources")
+        elif risk == "HIGH":
+            summary_parts.append("\n⚠️  WARNING: This content contains significant misinformation")
+            summary_parts.append("   Multiple claims are false or misleading")
+        elif risk == "MEDIUM":
+            summary_parts.append("\n⚠️  CAUTION: This content contains some misinformation")
+            summary_parts.append("   Several claims are problematic or unverified")
+        elif risk == "LOW":
+            summary_parts.append("\nℹ️  MODERATE: This content is mostly reliable")
+            summary_parts.append("   Some claims may need verification")
+        else:  # VERY_LOW
+            summary_parts.append("\n✅ RELIABLE: This content appears factually accurate")
+            summary_parts.append("   Most claims are supported by evidence")
+        
+        # Additional accuracy context
+        if accuracy < 0.3:
+            summary_parts.append(f"\n📉 Only {accuracy:.1%} of claims could be verified as true")
         elif accuracy > 0.8:
-            summary_parts.append("\n✅ This AI content appears mostly factually accurate")
-        else:
-            summary_parts.append("\n⚠️  This AI content contains some factual inaccuracies")
+            summary_parts.append(f"\n📈 {accuracy:.1%} of claims are supported by evidence")
         
         return "\n".join(summary_parts)
     
@@ -548,7 +599,8 @@ class AIContentFactChecker:
         
         # Print detailed results for each claim
         for i, result in enumerate(analysis['detailed_results'], 1):
-            print(f"\n{i}. {result.claim}")
+            verdict_icon = "✅" if result.verdict == Verdict.SUPPORTED else "❌" if result.verdict == Verdict.CONTRADICTED else "⚠️" if result.verdict == Verdict.PARTIALLY_SUPPORTED else "❓"
+            print(f"\n{i}. {verdict_icon} {result.claim}")
             print(f"   Type: {result.claim_type.value}")
             print(f"   Verdict: {result.verdict.value}")
             print(f"   Confidence: {result.confidence:.1%}")
@@ -579,29 +631,30 @@ def main():
     print("Eliminating misinformation by verifying against Wikipedia")
     print("="*70)
     
-    # Example AI-generated content for demonstration
-    sample_ai_content = """
-    Barack Obama was the 44th president of the United States. He was born in 1961 in Hawaii. 
-    Obama served as president from 2009 to 2017. He graduated from Harvard Law School and 
-    previously worked as a community organizer in Chicago. Obama was awarded the Nobel Peace 
-    Prize in 2009. He is married to Michelle Obama and they have two daughters. 
-    Before becoming president, Obama was a United States Senator from Illinois.
+    # Test content with known false claims
+    wrong_tech_content = """
+    Apple Inc. was founded in 1976 by Steve Jobs, Steve Wozniak, and Ronald Wayne. 
+    The first iPhone was released in 2005 and featured a physical keyboard. 
+    Apple's headquarters are located in Los Angeles, California. 
+    The company's market capitalization reached $5 trillion in 2020. 
+    Tim Cook became CEO of Apple in 2011 after Steve Jobs resigned. 
+    The iPad was Apple's first successful product that made them famous worldwide.
     """
     
-    print("Sample AI content to check:")
-    print('"' + sample_ai_content + '"')
+    print("Sample AI content to check (contains known false claims):")
+    print('"' + wrong_tech_content + '"')
     print("\n" + "="*70)
     
     while True:
         print("\nOptions:")
-        print("1. Use sample content above")
+        print("1. Use sample false content above")
         print("2. Enter your own AI-generated content")
         print("3. Exit")
         
         choice = input("\nEnter your choice (1-3): ").strip()
         
         if choice == '1':
-            content = sample_ai_content
+            content = wrong_tech_content
         elif choice == '2':
             print("\nEnter/Paste the AI-generated content to fact-check:")
             content = ""

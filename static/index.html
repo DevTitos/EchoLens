@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoLens - AI Content Fact Checker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #8b5cf6;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #06b6d4;
+            --dark: #1e293b;
+            --darker: #0f172a;
+            --light: #f8fafc;
+            --lighter: #f1f5f9;
+            --border: #e2e8f0;
+            --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            --glow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            min-height: 100vh;
+            color: var(--light);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .logo-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: var(--glow);
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            font-weight: 300;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .tagline {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 600;
+        }
+
+        .app-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .main-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .sidebar {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            padding: 2rem;
+            position: sticky;
+            top: 2rem;
+        }
+
+        .card-header {
+            padding: 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        }
+
+        .card-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        .input-section {
+            margin-bottom: 2rem;
+        }
+
+        .textarea-wrapper {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 250px;
+            padding: 1.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            resize: vertical;
+            transition: all 0.3s ease;
+            background: rgba(15, 23, 42, 0.6);
+            color: var(--light);
+            backdrop-filter: blur(10px);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), var(--glow);
+        }
+
+        textarea::placeholder {
+            color: #94a3b8;
+        }
+
+        .input-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        .char-count {
+            font-size: 0.875rem;
+            color: var(--secondary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .char-count.warning {
+            color: var(--warning);
+        }
+
+        .char-count.danger {
+            color: var(--danger);
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .loading-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .pulse-loader {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .pulse-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .pulse-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: var(--glow);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        .risk-indicator {
+            padding: 1.5rem;
+            border-radius: 16px;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .risk-indicator:hover {
+            transform: scale(1.02);
+        }
+
+        .risk-very-high { 
+            background: linear-gradient(135deg, #ef4444, #dc2626); 
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+        .risk-high { 
+            background: linear-gradient(135deg, #f59e0b, #d97706); 
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+        }
+        .risk-medium { 
+            background: linear-gradient(135deg, #eab308, #ca8a04); 
+            box-shadow: 0 8px 25px rgba(234, 179, 8, 0.4);
+        }
+        .risk-low { 
+            background: linear-gradient(135deg, #10b981, #059669); 
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+        .risk-very-low { 
+            background: linear-gradient(135deg, #10b981, #047857); 
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .chart-container {
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .claims-list {
+            space-y: 1.5rem;
+        }
+
+        .claim-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .claim-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            box-shadow: var(--glow);
+        }
+
+        .claim-card.expanded {
+            border-color: var(--primary);
+        }
+
+        .claim-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .claim-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .icon-strongly-supported { background: linear-gradient(135deg, var(--success), #059669); }
+        .icon-supported { background: linear-gradient(135deg, var(--success), #10b981); }
+        .icon-partial { background: linear-gradient(135deg, var(--warning), #d97706); }
+        .icon-contradicted { background: linear-gradient(135deg, var(--danger), #dc2626); }
+        .icon-strongly-contradicted { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+        .icon-unverifiable { background: linear-gradient(135deg, var(--secondary), #475569); }
+        .icon-misleading { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+
+        .claim-content {
+            flex: 1;
+        }
+
+        .claim-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            line-height: 1.5;
+        }
+
+        .claim-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--secondary);
+        }
+
+        .claim-expand {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: color 0.3s ease;
+        }
+
+        .claim-expand:hover {
+            color: var(--primary-light);
+        }
+
+        .claim-details {
+            display: none;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .evidence-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .evidence-list {
+            list-style: none;
+            space-y: 0.75rem;
+        }
+
+        .evidence-item {
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .evidence-item:hover {
+            transform: translateX(5px);
+        }
+
+        .evidence-supporting { 
+            background: rgba(16, 185, 129, 0.1); 
+            border-left: 4px solid var(--success);
+        }
+        .evidence-contradicting { 
+            background: rgba(239, 68, 68, 0.1); 
+            border-left: 4px solid var(--danger);
+        }
+
+        .confidence-factors {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .confidence-badge {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary-light);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-section h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: var(--light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .quick-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .quick-stat {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .quick-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .quick-stat-label {
+            font-size: 0.75rem;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .history-item {
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .history-item:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .history-content {
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.9;
+        }
+
+        .history-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--secondary);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .feature-item {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .feature-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .feature-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .feature-text {
+            font-size: 0.75rem;
+            color: var(--secondary);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--secondary);
+        }
+
+        .tech-stack {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .tech-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--secondary);
+        }
+
+        @media (max-width: 1024px) {
+            .app-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                position: static;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .claim-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .claim-meta {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-light);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+            </div>
+            <h1>EchoLens</h1>
+            <p>Advanced AI Content Verification Platform</p>
+            <p class="tagline">See through the noise with precision fact-checking</p>
+        </div>
+
+        <div class="app-grid">
+            <div class="main-card">
+                <div class="card-header">
+                    <h2><i class="fas fa-microscope"></i> Content Analysis</h2>
+                </div>
+                <div class="card-body">
+                    <div class="input-section">
+                        <div class="textarea-wrapper">
+                            <textarea 
+                                id="contentInput" 
+                                placeholder="Paste AI-generated content here for comprehensive fact-checking...
+
+Example: 
+Apple Inc. was founded in 1976 by Steve Jobs, Steve Wozniak, and Ronald Wayne. 
+The first iPhone was released in 2007 and revolutionized mobile technology.
+Apple's headquarters are located in Cupertino, California..."
+                                maxlength="5000"
+                            ></textarea>
+                        </div>
+                        <div class="input-footer">
+                            <div class="char-count" id="charCount">0/5000 characters</div>
+                            <button id="analyzeBtn" class="btn btn-primary">
+                                <i class="fas fa-rocket"></i> Analyze Content
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="loading" class="loading">
+                        <div class="loading-content">
+                            <div class="pulse-loader">
+                                <div class="pulse-dot"></div>
+                                <div class="pulse-dot"></div>
+                                <div class="pulse-dot"></div>
+                            </div>
+                            <p>Scanning content with EchoLens AI...</p>
+                            <p>Analyzing claims against Wikipedia database</p>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="resultsSection" class="results-section">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="accuracyScore">0%</div>
+                                <div class="stat-label">Accuracy Score</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="totalClaims">0</div>
+                                <div class="stat-label">Claims Analyzed</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="verifiedClaims">0</div>
+                                <div class="stat-label">Verified Claims</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="avgConfidence">0%</div>
+                                <div class="stat-label">Avg Confidence</div>
+                            </div>
+                        </div>
+
+                        <div id="riskIndicator" class="risk-indicator">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span id="riskText">Initializing risk assessment...</span>
+                        </div>
+
+                        <div class="chart-container">
+                            <canvas id="verdictChart"></canvas>
+                        </div>
+
+                        <div class="claims-list" id="claimsList">
+                            <!-- Claims will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-chart-line"></i> Quick Stats</h3>
+                    <div class="quick-stats">
+                        <div class="quick-stat">
+                            <div class="quick-stat-value" id="sidebarAccuracy">0%</div>
+                            <div class="quick-stat-label">Accuracy</div>
+                        </div>
+                        <div class="quick-stat">
+                            <div class="quick-stat-value" id="sidebarRisk">-</div>
+                            <div class="quick-stat-label">Risk Level</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-history"></i> Analysis History</h3>
+                    <div id="historyList">
+                        <div class="history-item">
+                            <div class="history-content">No analysis history yet</div>
+                            <div class="history-meta">
+                                <span>Start analyzing to see history</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-star"></i> Key Features</h3>
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <div class="feature-icon"><i class="fas fa-brain"></i></div>
+                            <div class="feature-text">AI-Powered Analysis</div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon"><i class="fas fa-database"></i></div>
+                            <div class="feature-text">Wikipedia Verification</div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon"><i class="fas fa-bolt"></i></div>
+                            <div class="feature-text">Real-time Results</div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+                            <div class="feature-text">Risk Assessment</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-info-circle"></i> About EchoLens</h3>
+                    <p style="font-size: 0.875rem; color: var(--secondary); line-height: 1.5;">
+                        EchoLens uses advanced NLP and Wikipedia integration to detect misinformation in AI-generated content with unprecedented accuracy.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="tech-stack">
+                <div class="tech-item"><i class="fab fa-python"></i> FastAPI Backend</div>
+                <div class="tech-item"><i class="fas fa-code"></i> Advanced NLP</div>
+                <div class="tech-item"><i class="fab fa-wikipedia-w"></i> Wikipedia API</div>
+                <div class="tech-item"><i class="fas fa-chart-bar"></i> Real-time Analytics</div>
+            </div>
+            <p>© 2024 EchoLens - Advanced AI Content Verification | Built for Precision Fact-Checking</p>
+        </div>
+    </div>
+
+    <script>
+        class EchoLensApp {
+            constructor() {
+                this.analyzeBtn = document.getElementById('analyzeBtn');
+                this.contentInput = document.getElementById('contentInput');
+                this.loading = document.getElementById('loading');
+                this.resultsSection = document.getElementById('resultsSection');
+                this.charCount = document.getElementById('charCount');
+                this.claimsList = document.getElementById('claimsList');
+                this.progressFill = document.getElementById('progressFill');
+                this.verdictChart = null;
+                this.analysisHistory = [];
+
+                this.initializeEventListeners();
+                this.initializeSampleContent();
+            }
+
+            initializeEventListeners() {
+                this.analyzeBtn.addEventListener('click', () => this.analyzeContent());
+                this.contentInput.addEventListener('input', () => this.updateCharCount());
+                
+                // Add keyboard shortcut (Ctrl/Cmd + Enter)
+                this.contentInput.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                        this.analyzeContent();
+                    }
+                });
+            }
+
+            initializeSampleContent() {
+                // Pre-fill with sample content for demo
+                const sampleContent = `Apple Inc. was founded in 1976 by Steve Jobs, Steve Wozniak, and Ronald Wayne. The first iPhone was released in 2007 and revolutionized mobile technology. Apple's headquarters are located in Cupertino, California. Tim Cook became CEO of Apple in 2011 after Steve Jobs resigned. The company's market capitalization reached $3 trillion in 2022.`;
+                this.contentInput.value = sampleContent;
+                this.updateCharCount();
+            }
+
+            updateCharCount() {
+                const length = this.contentInput.value.length;
+                this.charCount.textContent = `${length}/5000 characters`;
+                
+                // Update color based on length
+                this.charCount.className = 'char-count';
+                if (length > 4500) {
+                    this.charCount.classList.add('danger');
+                } else if (length > 3000) {
+                    this.charCount.classList.add('warning');
+                }
+            }
+
+            async analyzeContent() {
+                const content = this.contentInput.value.trim();
+                
+                if (!content) {
+                    this.showNotification('Please enter some content to analyze.', 'warning');
+                    return;
+                }
+
+                if (content.length < 10) {
+                    this.showNotification('Please enter more substantial content to analyze.', 'warning');
+                    return;
+                }
+
+                this.setLoading(true);
+                this.simulateProgress();
+                
+                try {
+                    const response = await fetch('/api/fact-check', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            content: content,
+                            language: 'en'
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Analysis failed: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    this.displayResults(result);
+                    this.addToHistory(result);
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.showNotification('Failed to analyze content. Please try again.', 'error');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+
+            simulateProgress() {
+                let progress = 0;
+                const interval = setInterval(() => {
+                    if (!this.loading.style.display || this.loading.style.display === 'none') {
+                        clearInterval(interval);
+                        return;
+                    }
+                    progress += Math.random() * 10;
+                    if (progress > 90) progress = 90;
+                    this.progressFill.style.width = `${progress}%`;
+                }, 200);
+            }
+
+            setLoading(loading) {
+                if (loading) {
+                    this.analyzeBtn.disabled = true;
+                    this.analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+                    this.loading.style.display = 'block';
+                    this.resultsSection.style.display = 'none';
+                    this.progressFill.style.width = '0%';
+                } else {
+                    this.analyzeBtn.disabled = false;
+                    this.analyzeBtn.innerHTML = '<i class="fas fa-rocket"></i> Analyze Content';
+                    this.loading.style.display = 'none';
+                    this.progressFill.style.width = '100%';
+                }
+            }
+
+            displayResults(data) {
+                // Update main statistics
+                document.getElementById('accuracyScore').textContent = `${(data.accuracy_score * 100).toFixed(1)}%`;
+                document.getElementById('totalClaims').textContent = data.total_claims;
+                document.getElementById('verifiedClaims').textContent = data.verified_claims;
+                document.getElementById('avgConfidence').textContent = `${(data.average_confidence * 100).toFixed(1)}%`;
+
+                // Update sidebar statistics
+                document.getElementById('sidebarAccuracy').textContent = `${(data.accuracy_score * 100).toFixed(1)}%`;
+                document.getElementById('sidebarRisk').textContent = data.misinformation_risk.split('_').join(' ');
+
+                // Update risk indicator
+                this.updateRiskIndicator(data.misinformation_risk);
+
+                // Create verdict distribution chart
+                this.createVerdictChart(data.detailed_results);
+
+                // Display claims
+                this.displayClaims(data.detailed_results);
+
+                // Show results section with animation
+                this.resultsSection.style.display = 'block';
+                this.resultsSection.classList.add('fade-in-up');
+                
+                // Scroll to results
+                setTimeout(() => {
+                    this.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 300);
+            }
+
+            updateRiskIndicator(risk) {
+                const riskIndicator = document.getElementById('riskIndicator');
+                const riskText = document.getElementById('riskText');
+                
+                // Remove all risk classes
+                riskIndicator.className = 'risk-indicator';
+                riskIndicator.classList.add(`risk-${risk.toLowerCase().replace('_', '-')}`);
+                
+                const riskConfig = {
+                    'VERY_HIGH': { icon: 'fa-skull-crossbones', text: 'CRITICAL: Very High Misinformation Risk' },
+                    'HIGH': { icon: 'fa-exclamation-triangle', text: 'WARNING: High Misinformation Risk' },
+                    'MEDIUM': { icon: 'fa-exclamation-circle', text: 'CAUTION: Medium Misinformation Risk' },
+                    'LOW': { icon: 'fa-info-circle', text: 'MODERATE: Low Misinformation Risk' },
+                    'VERY_LOW': { icon: 'fa-check-circle', text: 'RELIABLE: Very Low Misinformation Risk' }
+                };
+                
+                const config = riskConfig[risk] || { icon: 'fa-question', text: 'Unknown Risk Level' };
+                riskText.innerHTML = `<i class="fas ${config.icon}"></i> ${config.text}`;
+            }
+
+            createVerdictChart(results) {
+                const ctx = document.getElementById('verdictChart').getContext('2d');
+                
+                // Count verdicts
+                const verdictCounts = {
+                    'STRONGLY_SUPPORTED': 0,
+                    'SUPPORTED': 0,
+                    'PARTIALLY_SUPPORTED': 0,
+                    'CONTRADICTED': 0,
+                    'STRONGLY_CONTRADICTED': 0,
+                    'UNVERIFIABLE': 0,
+                    'MISLEADING': 0
+                };
+
+                results.forEach(result => {
+                    verdictCounts[result.verdict]++;
+                });
+
+                const backgroundColors = {
+                    'STRONGLY_SUPPORTED': '#10b981',
+                    'SUPPORTED': '#34d399',
+                    'PARTIALLY_SUPPORTED': '#f59e0b',
+                    'CONTRADICTED': '#ef4444',
+                    'STRONGLY_CONTRADICTED': '#dc2626',
+                    'UNVERIFIABLE': '#64748b',
+                    'MISLEADING': '#8b5cf6'
+                };
+
+                if (this.verdictChart) {
+                    this.verdictChart.destroy();
+                }
+
+                this.verdictChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(verdictCounts).map(key => 
+                            key.charAt(0) + key.slice(1).toLowerCase().replace(/_/g, ' ')
+                        ),
+                        datasets: [{
+                            data: Object.values(verdictCounts),
+                            backgroundColor: Object.keys(verdictCounts).map(key => backgroundColors[key]),
+                            borderWidth: 3,
+                            borderColor: '#1e293b',
+                            hoverBorderWidth: 4,
+                            hoverBorderColor: '#334155'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    padding: 20,
+                                    usePointStyle: true,
+                                    font: {
+                                        family: 'Inter',
+                                        size: 11,
+                                        weight: '500'
+                                    },
+                                    color: '#e2e8f0'
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                                titleColor: '#f1f5f9',
+                                bodyColor: '#cbd5e1',
+                                borderColor: '#475569',
+                                borderWidth: 1
+                            }
+                        },
+                        cutout: '65%',
+                        animation: {
+                            animateScale: true,
+                            animateRotate: true
+                        }
+                    }
+                });
+            }
+
+            displayClaims(results) {
+                this.claimsList.innerHTML = '';
+
+                const iconMap = {
+                    'STRONGLY_SUPPORTED': 'fa-check-double icon-strongly-supported',
+                    'SUPPORTED': 'fa-check-circle icon-supported',
+                    'PARTIALLY_SUPPORTED': 'fa-exclamation-circle icon-partial',
+                    'CONTRADICTED': 'fa-times-circle icon-contradicted',
+                    'STRONGLY_CONTRADICTED': 'fa-ban icon-strongly-contradicted',
+                    'UNVERIFIABLE': 'fa-question-circle icon-unverifiable',
+                    'MISLEADING': 'fa-exclamation-triangle icon-misleading'
+                };
+
+                results.forEach((result, index) => {
+                    const claimCard = document.createElement('div');
+                    claimCard.className = 'claim-card fade-in-up';
+                    claimCard.style.animationDelay = `${index * 0.1}s`;
+                    
+                    claimCard.innerHTML = `
+                        <div class="claim-header">
+                            <div class="claim-icon ${iconMap[result.verdict]}">
+                                <i class="fas ${iconMap[result.verdict].split(' ')[0]}"></i>
+                            </div>
+                            <div class="claim-content">
+                                <div class="claim-text">${result.claim}</div>
+                                <div class="claim-meta">
+                                    <div class="meta-item">
+                                        <i class="fas fa-balance-scale"></i>
+                                        ${result.verdict.replace(/_/g, ' ')}
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-chart-line"></i>
+                                        ${(result.confidence * 100).toFixed(1)}% Confidence
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-project-diagram"></i>
+                                        ${result.claim_type.replace(/_/g, ' ')}
+                                    </div>
+                                </div>
+                                <button class="claim-expand" onclick="app.toggleClaimDetails(this)">
+                                    <i class="fas fa-chevron-down"></i>
+                                    Show Details
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="claim-details">
+                            <div class="evidence-section">
+                                ${result.supporting_evidence.length > 0 ? `
+                                    <h4 style="margin-bottom: 0.75rem; color: #10b981;">
+                                        <i class="fas fa-check-circle"></i> Supporting Evidence
+                                    </h4>
+                                    <ul class="evidence-list">
+                                        ${result.supporting_evidence.map(evidence => `
+                                            <li class="evidence-item evidence-supporting">
+                                                <i class="fas fa-check" style="color: #10b981;"></i>
+                                                <span>${evidence}</span>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                ` : ''}
+                                
+                                ${result.contradicting_evidence.length > 0 ? `
+                                    <h4 style="margin-bottom: 0.75rem; color: #ef4444; margin-top: 1rem;">
+                                        <i class="fas fa-times-circle"></i> Contradicting Evidence
+                                    </h4>
+                                    <ul class="evidence-list">
+                                        ${result.contradicting_evidence.map(evidence => `
+                                            <li class="evidence-item evidence-contradicting">
+                                                <i class="fas fa-times" style="color: #ef4444;"></i>
+                                                <span>${evidence}</span>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                ` : ''}
+                            </div>
+
+                            <div style="margin-top: 1rem;">
+                                <h4 style="margin-bottom: 0.75rem; color: #06b6d4;">
+                                    <i class="fas fa-info-circle"></i> Analysis Details
+                                </h4>
+                                <p style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 1rem;">${result.explanation}</p>
+                                
+                                ${result.entity_matches.length > 0 ? `
+                                    <div style="margin-bottom: 1rem;">
+                                        <strong>Entity Matches:</strong>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                                            ${result.entity_matches.map(match => `
+                                                <span style="background: rgba(6, 182, 212, 0.2); color: #06b6d4; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem;">
+                                                    ${match}
+                                                </span>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                <div class="confidence-factors">
+                                    ${result.confidence_factors.map(factor => `
+                                        <div class="confidence-badge">${factor}</div>
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                            ${result.wikipedia_source ? `
+                                <div style="margin-top: 1rem; text-align: center;">
+                                    <a href="${result.wikipedia_source}" target="_blank" 
+                                       style="color: var(--primary); text-decoration: none; font-weight: 500;">
+                                        <i class="fas fa-external-link-alt"></i> View Wikipedia Source
+                                    </a>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+
+                    this.claimsList.appendChild(claimCard);
+                });
+            }
+
+            toggleClaimDetails(button) {
+                const claimCard = button.closest('.claim-card');
+                const details = claimCard.querySelector('.claim-details');
+                const icon = button.querySelector('i');
+                
+                if (details.style.display === 'block') {
+                    details.style.display = 'none';
+                    icon.className = 'fas fa-chevron-down';
+                    button.innerHTML = '<i class="fas fa-chevron-down"></i> Show Details';
+                    claimCard.classList.remove('expanded');
+                } else {
+                    details.style.display = 'block';
+                    icon.className = 'fas fa-chevron-up';
+                    button.innerHTML = '<i class="fas fa-chevron-up"></i> Hide Details';
+                    claimCard.classList.add('expanded');
+                }
+            }
+
+            addToHistory(analysis) {
+                const historyItem = {
+                    id: analysis.analysis_id,
+                    content: analysis.content.substring(0, 100) + '...',
+                    accuracy: (analysis.accuracy_score * 100).toFixed(1),
+                    risk: analysis.misinformation_risk,
+                    timestamp: new Date().toLocaleTimeString()
+                };
+
+                this.analysisHistory.unshift(historyItem);
+                if (this.analysisHistory.length > 5) {
+                    this.analysisHistory.pop();
+                }
+
+                this.updateHistoryDisplay();
+            }
+
+            updateHistoryDisplay() {
+                const historyList = document.getElementById('historyList');
+                
+                if (this.analysisHistory.length === 0) {
+                    historyList.innerHTML = `
+                        <div class="history-item">
+                            <div class="history-content">No analysis history yet</div>
+                            <div class="history-meta">
+                                <span>Start analyzing to see history</span>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                historyList.innerHTML = this.analysisHistory.map(item => `
+                    <div class="history-item" onclick="app.loadFromHistory('${item.id}')">
+                        <div class="history-content">${item.content}</div>
+                        <div class="history-meta">
+                            <span>${item.accuracy}% Accuracy</span>
+                            <span>${item.timestamp}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            loadFromHistory(analysisId) {
+                const item = this.analysisHistory.find(h => h.id === analysisId);
+                if (item) {
+                    this.showNotification('Loading analysis from history...', 'info');
+                    // In a real app, you would fetch the full analysis from the server
+                }
+            }
+
+            showNotification(message, type = 'info') {
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.className = `notification notification-${type}`;
+                notification.innerHTML = `
+                    <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'warning' ? 'exclamation-circle' : 'info-circle'}"></i>
+                    ${message}
+                `;
+                
+                // Add styles for notification
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#10b981'};
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    border-radius: 12px;
+                    box-shadow: var(--shadow);
+                    z-index: 1000;
+                    animation: slideInRight 0.3s ease-out;
+                    max-width: 300px;
+                `;
+
+                document.body.appendChild(notification);
+
+                // Remove after 5 seconds
+                setTimeout(() => {
+                    notification.style.animation = 'slideOutRight 0.3s ease-in';
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 300);
+                }, 5000);
+            }
+        }
+
+        // Initialize the application
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new EchoLensApp();
+        });
+
+        // Add CSS for notification animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOutRight {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

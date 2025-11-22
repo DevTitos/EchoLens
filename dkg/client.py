@@ -1,14 +1,6 @@
-from dkg import DKG
-from dkg.providers import BlockchainProvider, NodeHTTPProvider
+from dkg.constants import BlockchainIds
 
-node_provider = NodeHTTPProvider(endpoint_uri="http://localhost:8900", api_version="v1")
-blockchain_provider = BlockchainProvider(
-    Environments.DEVELOPMENT.value, # or TESTNET, MAINNET
-    BlockchainIds.HARDHAT_1.value,
-)
-
-dkg = DKG(node_provider, blockchain_provider)
-
-print(dkg.node.info)
-# if successfully connected, this should print the dictionary with node version
-# { "version": "8.X.X" }
+# Print all available blockchain IDs
+print("Available Blockchain IDs:")
+for blockchain_id in BlockchainIds:
+    print(f"  - {blockchain_id.name}: {blockchain_id.value}")
